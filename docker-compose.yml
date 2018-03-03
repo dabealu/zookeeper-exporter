@@ -11,7 +11,7 @@ services:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=0.0.0.0:2888:3888 server.2=zoo2:2888:3888 server.3=zoo3:2888:3888
   exp1:
-    image: zookeeper-exporter
+    image: dabealu/zookeeper-exporter
     ports:
       - 8081:8080
     command: --zk-host=zoo1
@@ -26,7 +26,7 @@ services:
       ZOO_MY_ID: 2
       ZOO_SERVERS: server.1=zoo1:2888:3888 server.2=0.0.0.0:2888:3888 server.3=zoo3:2888:3888
   exp2:
-    image: zookeeper-exporter
+    image: dabealu/zookeeper-exporter
     ports:
       - 8082:8080
     command: --zk-host=zoo2
@@ -42,7 +42,7 @@ services:
       ZOO_MY_ID: 3
       ZOO_SERVERS: server.1=zoo1:2888:3888 server.2=zoo2:2888:3888 server.3=0.0.0.0:2888:3888
   exp3:
-    image: zookeeper-exporter
+    image: dabealu/zookeeper-exporter
     ports:
       - 8083:8080
     command: --zk-host=zoo3
