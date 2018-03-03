@@ -3,7 +3,7 @@ Exports `mntr` zookeeper's stats in prometheus format.
 `zk_followers`, `zk_synced_followers` and `zk_pending_syncs` metrics are available only on cluster leader.  
 
 #### Build
-`./build.sh` script builds `zookeeper-exporter:latest` docker image.  
+`./build.sh` script builds `dabealu/zookeeper-exporter:latest` docker image.  
 To build image with different name, pass it to `build.sh` as a first arg.  
 
 #### Usage
