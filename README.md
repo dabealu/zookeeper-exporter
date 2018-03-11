@@ -8,13 +8,15 @@ To build image with different name, pass it to `build.sh` as a first arg.
 
 #### Usage
 ```
-Usage of zookeeper-exporter:
+Usage of /usr/local/bin/zookeeper-exporter:
   -listen string
         address to listen on (default "0.0.0.0:8080")
   -location string
         metrics location (default "/metrics")
   -zk-host string
         zookeeper host (default "127.0.0.1")
+  -zk-list string
+        comma separated list of zk servers, i.e. '10.0.0.1:2181,10.0.0.2:2181,10.0.0.3:2181', this flag overrides --zk-host/port
   -zk-port string
         zookeeper port (default "2181")
 ```
@@ -26,6 +28,9 @@ docker-compose up -d
 
 # get metrics of first exporter (second and third exporters are on 8082 and 8083 ports)
 curl -s localhost:8081/metrics
+
+# at 8084 port there's exporter which handles multiple zk hosts
+curl -s localhost:8084/metrics
 
 # shutdown containers
 docker-compose down -v

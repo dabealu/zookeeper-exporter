@@ -46,3 +46,9 @@ services:
     ports:
       - 8083:8080
     command: --zk-host=zoo3
+
+  exp123:
+    image: dabealu/zookeeper-exporter
+    ports:
+      - 8084:8080
+    command: --zk-list="zoo1:2181,zoo2:2181,zoo3:2181"
