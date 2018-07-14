@@ -48,6 +48,13 @@ func getMetrics(hosts []zkHost) map[string]string {
 		// get slice of strings from response, like 'zk_avg_latency 0'
 		lines := strings.Split(string(res), "\n")
 
+		// skip instance if it in a leader only state and doesnt serving client requets
+		if lines[0] == "This ZooKeeper instance is not currently serving requests" {
+			metrics[fmt.Sprintf("zk_up{%s}", hostLabel)] = "1"
+			metrics[fmt.Sprintf("zk_server_leader{%s}", hostLabel)] = "1"
+			continue
+		}
+
 		// split each line into key-value pair
 		for _, l := range lines {
 			l = strings.Replace(l, "\t", " ", -1)
