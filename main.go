@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func errFatal(e error) {
@@ -21,15 +22,22 @@ type zkHost struct {
 	*net.TCPAddr
 }
 
+type zkOptions struct {
+	Timeout int64
+	Hosts   []zkHost
+}
+
 // open tcp connections to zk nodes, send 'mntr' and return result as a map
-func getMetrics(hosts []zkHost) map[string]string {
+func getMetrics(zkOpts zkOptions) map[string]string {
 	metrics := map[string]string{}
 
-	for _, h := range hosts {
+	for _, h := range zkOpts.Hosts {
 		hostLabel := fmt.Sprintf("zk_host=%q", h.Unresolved)
 
 		// open connection
-		conn, err := net.DialTCP("tcp", nil, h.TCPAddr)
+		timeout := time.Duration(zkOpts.Timeout) * time.Second
+		d := net.Dialer{Timeout: timeout}
+		conn, err := d.Dial("tcp", h.TCPAddr.String())
 		if err != nil {
 			log.Printf("warning: cannot connect to %s: %v", h.Unresolved, err)
 			metrics[fmt.Sprintf("zk_up{%s}", hostLabel)] = "0"
@@ -82,9 +90,9 @@ func getMetrics(hosts []zkHost) map[string]string {
 }
 
 // serve zk metrics at chosen address and url
-func serveMetrics(location, listen string, zk []zkHost) {
+func serveMetrics(location, listen string, zkOpts zkOptions) {
 	h := func(w http.ResponseWriter, r *http.Request) {
-		for k, v := range getMetrics(zk) {
+		for k, v := range getMetrics(zkOpts) {
 			fmt.Fprintf(w, "%s %s\n", k, v)
 		}
 	}
@@ -98,27 +106,33 @@ func serveMetrics(location, listen string, zk []zkHost) {
 func main() {
 	location := flag.String("location", "/metrics", "metrics location")
 	listen := flag.String("listen", "0.0.0.0:8080", "address to listen on")
+	timeout := flag.Int64("timeout", 120, "timeout for connection to zk servers, in seconds")
 	host := flag.String("zk-host", "127.0.0.1", "zookeeper host")
 	port := flag.String("zk-port", "2181", "zookeeper port")
 	list := flag.String("zk-list", "",
 		"comma separated list of zk servers, i.e. '10.0.0.1:2181,10.0.0.2:2181,10.0.0.3:2181', this flag overrides --zk-host/port")
 	flag.Parse()
 
-	zkHosts := []zkHost{}
+	Hosts := []zkHost{}
 
 	if *list == "" {
 		h := *host + ":" + *port
 		tcp, err := net.ResolveTCPAddr("tcp", h)
 		errFatal(err)
-		zkHosts = append(zkHosts, zkHost{Unresolved: h, TCPAddr: tcp})
+		Hosts = append(Hosts, zkHost{Unresolved: h, TCPAddr: tcp})
 	} else {
 		for _, h := range strings.Split(*list, ",") {
 			tcp, err := net.ResolveTCPAddr("tcp", h)
 			errFatal(err)
-			zkHosts = append(zkHosts, zkHost{Unresolved: h, TCPAddr: tcp})
+			Hosts = append(Hosts, zkHost{Unresolved: h, TCPAddr: tcp})
 		}
 	}
 
-	log.Printf("zookeeper addresses %v", zkHosts)
-	serveMetrics(*location, *listen, zkHosts)
+	log.Printf("zookeeper addresses %v", Hosts)
+
+	zkOpts := zkOptions{
+		Timeout: *timeout,
+		Hosts:   Hosts,
+	}
+	serveMetrics(*location, *listen, zkOpts)
 }

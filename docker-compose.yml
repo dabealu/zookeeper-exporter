@@ -33,7 +33,9 @@ services:
 
   # third
   zoo3:
-    image: zookeeper:3.4
+    build:
+      context: zoo-timeout
+    privileged: true  # Needed for iptables drop rule to work in custom entrypoint script
     restart: always
     hostname: zoo3
     ports:
@@ -45,10 +47,10 @@ services:
     image: dabealu/zookeeper-exporter
     ports:
       - 8083:8080
-    command: --zk-host=zoo3
+    command: --zk-host=zoo3 --timeout=5
 
   exp123:
     image: dabealu/zookeeper-exporter
     ports:
       - 8084:8080
-    command: --zk-list="zoo1:2181,zoo2:2181,zoo3:2181"
+    command: --zk-list="zoo1:2181,zoo2:2181,zoo3:2181" --timeout=5
