@@ -8,11 +8,13 @@ To build image with different name, pass it to `build.sh` as a first arg.
 
 #### Usage
 ```
-Usage of /usr/local/bin/zookeeper-exporter:
+Usage of zookeeper-exporter:
   -listen string
         address to listen on (default "0.0.0.0:8080")
   -location string
         metrics location (default "/metrics")
+  -timeout int
+        timeout for connection to zk servers, in seconds (default 120)
   -zk-host string
         zookeeper host (default "127.0.0.1")
   -zk-list string
