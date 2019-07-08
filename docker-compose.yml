@@ -3,13 +3,14 @@ services:
 
   # first
   zoo1:
-    image: zookeeper:3.4
+    image: zookeeper:3.5
     hostname: zoo1
     ports:
       - 2181:2181
     environment:
       ZOO_MY_ID: 1
-      ZOO_SERVERS: server.1=0.0.0.0:2888:3888 server.2=zoo2:2888:3888 server.3=zoo3:2888:3888
+    volumes:
+      - ./zoo-conf/zoo.cfg.1:/conf/zoo.cfg
   exp1:
     image: dabealu/zookeeper-exporter
     ports:
@@ -18,13 +19,14 @@ services:
 
   # second
   zoo2:
-    image: zookeeper:3.4
+    image: zookeeper:3.5
     hostname: zoo2
     ports:
       - 2182:2181
     environment:
       ZOO_MY_ID: 2
-      ZOO_SERVERS: server.1=zoo1:2888:3888 server.2=0.0.0.0:2888:3888 server.3=zoo3:2888:3888
+    volumes:
+      - ./zoo-conf/zoo.cfg.2:/conf/zoo.cfg
   exp2:
     image: dabealu/zookeeper-exporter
     ports:
@@ -33,16 +35,19 @@ services:
 
   # third
   zoo3:
-    build:
-      context: zoo-timeout
-    privileged: true  # Needed for iptables drop rule to work in custom entrypoint script
-    restart: always
+    ##### Uncomment block below and comment 'image' parameter in order to test timeout
+    # build:
+    #   context: zoo-timeout
+    # privileged: true  # Needed for iptables drop rule to work in custom entrypoint script
+    ##### End
+    image: zookeeper:3.5
     hostname: zoo3
     ports:
       - 2183:2181
     environment:
       ZOO_MY_ID: 3
-      ZOO_SERVERS: server.1=zoo1:2888:3888 server.2=zoo2:2888:3888 server.3=0.0.0.0:2888:3888
+    volumes:
+      - ./zoo-conf/zoo.cfg.3:/conf/zoo.cfg
   exp3:
     image: dabealu/zookeeper-exporter
     ports:

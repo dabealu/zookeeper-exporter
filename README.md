@@ -7,6 +7,8 @@ Exports `mntr` zookeeper's stats in prometheus format.
 To build image with different name, pass it to `build.sh` as a first arg.  
 
 #### Usage
+**Note:** starting from zookeeper v3.4.10 it's required to have `mntr` command whitelisted (details: [4lw.commands.whitelist](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html)).
+
 ```
 Usage of zookeeper-exporter:
   -listen string

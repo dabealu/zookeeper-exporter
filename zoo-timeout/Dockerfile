@@ -1,6 +1,6 @@
-FROM zookeeper:3.4
+FROM zookeeper:3.5
 
-RUN apk add --no-cache iptables
+RUN apt-get update && apt-get install -y iptables
 
 # Add custom entrypoint to set iptables rules and then resume the original entrypoint script
 ADD custom-entrypoint.sh /

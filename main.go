@@ -63,6 +63,13 @@ func getMetrics(zkOpts zkOptions) map[string]string {
 			continue
 		}
 
+		// 'mntr' command isn't allowed in zk config, log as a warning
+		if lines[0] == "mntr is not executed because it is not in the whitelist." {
+			metrics[fmt.Sprintf("zk_up{%s}", hostLabel)] = "0"
+			log.Printf("warning: mntr command isn't allowed at %s, see '4lw.commands.whitelist' ZK config parameter", hostLabel)
+			continue
+		}
+
 		// split each line into key-value pair
 		for _, l := range lines {
 			l = strings.Replace(l, "\t", " ", -1)
