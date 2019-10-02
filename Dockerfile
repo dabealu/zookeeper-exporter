@@ -3,6 +3,6 @@ WORKDIR     /usr/src/zookeeper-exporter
 COPY        . /usr/src/zookeeper-exporter
 RUN         go build -v 
 
-FROM        alpine:3.6
+FROM        alpine:latest
 COPY        --from=builder /usr/src/zookeeper-exporter/zookeeper-exporter /usr/local/bin/zookeeper-exporter
 ENTRYPOINT  ["/usr/local/bin/zookeeper-exporter"]
