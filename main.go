@@ -28,10 +28,10 @@ type zkOptions struct {
 }
 
 // open tcp connections to zk nodes, send 'mntr' and return result as a map
-func getMetrics(zkOpts zkOptions) map[string]string {
+func getMetrics(zkOpts *zkOptions) map[string]string {
 	metrics := map[string]string{}
 
-	for _, h := range zkOpts.Hosts {
+	for i, h := range zkOpts.Hosts {
 		hostLabel := fmt.Sprintf("zk_host=%q", h.Unresolved)
 
 		// open connection
@@ -41,6 +41,13 @@ func getMetrics(zkOpts zkOptions) map[string]string {
 		if err != nil {
 			log.Printf("warning: cannot connect to %s: %v", h.Unresolved, err)
 			metrics[fmt.Sprintf("zk_up{%s}", hostLabel)] = "0"
+			new_tcp, _ := net.ResolveTCPAddr("tcp", h.Unresolved)
+			if new_tcp.IP.String() != h.TCPAddr.IP.String() {
+				log.Printf("INFO: resolve %s to new ip: %s ( old ip was: %s )", h.Unresolved, new_tcp, h.TCPAddr)
+				zkOpts.Hosts[i].TCPAddr = new_tcp
+			}else{
+				errFatal(err)
+			}
 			continue
 		}
 
@@ -97,7 +104,7 @@ func getMetrics(zkOpts zkOptions) map[string]string {
 }
 
 // serve zk metrics at chosen address and url
-func serveMetrics(location, listen string, zkOpts zkOptions) {
+func serveMetrics(location, listen string,  zkOpts *zkOptions) {
 	h := func(w http.ResponseWriter, r *http.Request) {
 		for k, v := range getMetrics(zkOpts) {
 			fmt.Fprintf(w, "%s %s\n", k, v)
@@ -141,5 +148,5 @@ func main() {
 		Timeout: *timeout,
 		Hosts:   Hosts,
 	}
-	serveMetrics(*location, *listen, zkOpts)
+	serveMetrics(*location, *listen, &zkOpts)
 }
