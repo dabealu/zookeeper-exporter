@@ -41,10 +41,10 @@ func getMetrics(zkOpts *zkOptions) map[string]string {
 		if err != nil {
 			log.Printf("warning: cannot connect to %s: %v", h.Unresolved, err)
 			metrics[fmt.Sprintf("zk_up{%s}", hostLabel)] = "0"
-			new_tcp, _ := net.ResolveTCPAddr("tcp", h.Unresolved)
-			if new_tcp.IP.String() != h.TCPAddr.IP.String() {
-				log.Printf("INFO: resolve %s to new ip: %s ( old ip was: %s )", h.Unresolved, new_tcp, h.TCPAddr)
-				zkOpts.Hosts[i].TCPAddr = new_tcp
+			newTcp, _ := net.ResolveTCPAddr("tcp", h.Unresolved)
+			if newTcp.IP.String() != h.TCPAddr.IP.String() {
+				log.Printf("INFO: resolve %s to new ip: %s ( old ip was: %s )", h.Unresolved, newTcp, h.TCPAddr)
+				zkOpts.Hosts[i].TCPAddr = newTcp
 			}else{
 				errFatal(err)
 			}
