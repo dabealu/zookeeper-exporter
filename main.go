@@ -120,7 +120,7 @@ func serveMetrics(location, listen string,  zkOpts *zkOptions) {
 func main() {
 	location := flag.String("location", "/metrics", "metrics location")
 	listen := flag.String("listen", "0.0.0.0:8080", "address to listen on")
-	timeout := flag.Int64("timeout", 120, "timeout for connection to zk servers, in seconds")
+	timeout := flag.Int64("timeout", 30, "timeout for connection to zk servers, in seconds")
 	host := flag.String("zk-host", "127.0.0.1", "zookeeper host")
 	port := flag.String("zk-port", "2181", "zookeeper port")
 	list := flag.String("zk-list", "",
