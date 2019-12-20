@@ -39,3 +39,6 @@ curl -s localhost:8084/metrics
 # shutdown containers
 docker-compose down -v
 ```
+
+#### Dashboard
+Example grafana dashboard: https://grafana.com/grafana/dashboards/11442
