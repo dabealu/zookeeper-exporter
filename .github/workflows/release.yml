@@ -6,33 +6,8 @@ on:
     - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    steps:
-    - name: checkout
-      uses: actions/checkout@v1
-
-    - name: get version
-      id: v
-      run: echo ::set-output name=t::$( awk -F '/' '{print $NF}' <<< "${GITHUB_REF}" )
-
-    - name: create release
-      id: create-release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.v.outputs.t }}
-        release_name: ${{ steps.v.outputs.t }}
-        draft: false
-        prerelease: false
-
   build:
-    runs-on: ${{ matrix.platform }}
-    strategy:
-      matrix:
-        platform: ["ubuntu-latest", "macos-latest"]
-
+    runs-on: ubuntu-latest
     steps:
     - name: install go
       uses: actions/setup-go@v1
@@ -42,17 +17,46 @@ jobs:
     - name: checkout
       uses: actions/checkout@v1
 
+    - name: get version
+      id: v
+      run: echo ::set-output name=tag::$( awk -F '/' '{print $NF}' <<< "${GITHUB_REF}" )
+
     - name: build
       run: |
-        go build -v -o zookeeper-exporter
-        tar czvf zookeeper-exporter-${{ job.release.steps.v.outputs.t }}-${{ runner.os }}.tar.gz zookeeper-exporter
+        for OS in linux darwin; do
+          echo "building binary for ${OS}"
+          GOOS=${OS} GOARCH=amd64 go build -v -o zookeeper-exporter
+          tar czvf zookeeper-exporter-${{ steps.v.outputs.tag }}-${OS}.tar.gz zookeeper-exporter
+        done
+        ls -lha
 
-    - name: upload release asset
+    - name: create release
+      id: create-release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.v.outputs.tag }}
+        release_name: ${{ steps.v.outputs.tag }}
+        draft: false
+        prerelease: false
+
+    - name: upload linux binary
       uses: actions/upload-release-asset@v1.0.1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ job.release.steps.create-release.outputs.upload_url }}
-        asset_path: zookeeper-exporter-${{ job.release.steps.v.outputs.t }}-${{ runner.os }}.tar.gz
-        asset_name: zookeeper-exporter-${{ job.release.steps.v.outputs.t }}-${{ runner.os }}.tar.gz
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: zookeeper-exporter-${{ steps.v.outputs.tag }}-linux.tar.gz
+        asset_name: zookeeper-exporter-${{ steps.v.outputs.tag }}-linux.tar.gz
+        asset_content_type: application/gzip
+
+    - name: upload macos binary
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: zookeeper-exporter-${{ steps.v.outputs.tag }}-macos.tar.gz
+        asset_name: zookeeper-exporter-${{ steps.v.outputs.tag }}-macos.tar.gz
         asset_content_type: application/gzip
