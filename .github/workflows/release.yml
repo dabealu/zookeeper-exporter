@@ -1,0 +1,51 @@
+name: Create release and build binary
+
+on:
+  push:
+    tags:
+    - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform: ["ubuntu-latest", "macos-latest", "windows-latest"]
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: install go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13.x
+
+    - name: checkout
+      uses: actions/checkout@v1
+
+    - name: get version
+      id: v
+      run: echo ::set-output name=tag::$( awk -F '/' '{print $NF}' <<< "${GITHUB_REF}" )
+
+    - name: build
+      run: |
+        go build -v -o zookeeper-exporter
+        tar tar czvf zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}.tar.gz zookeeper-exporter
+
+    - name: create release
+      id: create-release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.v.outputs.tag }}
+        release_name: ${{ steps.v.outputs.tag }}
+        draft: false
+        prerelease: false
+
+    - name: upload release asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}.tar.gz
+        asset_name: zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}.tar.gz
+        asset_content_type: application/gzip
