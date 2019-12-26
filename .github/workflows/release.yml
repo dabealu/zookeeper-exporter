@@ -7,7 +7,6 @@ on:
 
 jobs:
   release:
-    id: release
     runs-on: ubuntu-latest
     steps:
     - name: checkout
@@ -46,14 +45,14 @@ jobs:
     - name: build
       run: |
         go build -v -o zookeeper-exporter
-        tar czvf zookeeper-exporter-${{ jobs.release.steps.v.outputs.t }}-${{ runner.os }}.tar.gz zookeeper-exporter
+        tar czvf zookeeper-exporter-${{ job.release.steps.v.outputs.t }}-${{ runner.os }}.tar.gz zookeeper-exporter
 
     - name: upload release asset
       uses: actions/upload-release-asset@v1.0.1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ jobs.release.steps.create-release.outputs.upload_url }}
-        asset_path: zookeeper-exporter-${{ jobs.release.steps.v.outputs.t }}-${{ runner.os }}.tar.gz
-        asset_name: zookeeper-exporter-${{ jobs.release.steps.v.outputs.t }}-${{ runner.os }}.tar.gz
+        upload_url: ${{ job.release.steps.create-release.outputs.upload_url }}
+        asset_path: zookeeper-exporter-${{ job.release.steps.v.outputs.t }}-${{ runner.os }}.tar.gz
+        asset_name: zookeeper-exporter-${{ job.release.steps.v.outputs.t }}-${{ runner.os }}.tar.gz
         asset_content_type: application/gzip
