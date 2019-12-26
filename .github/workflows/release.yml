@@ -9,7 +9,7 @@ jobs:
   build:
     strategy:
       matrix:
-        platform: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        platform: ["ubuntu-latest", "macos-latest"]
     runs-on: ${{ matrix.platform }}
     steps:
     - name: install go
@@ -27,7 +27,7 @@ jobs:
     - name: build
       run: |
         go build -v -o zookeeper-exporter
-        tar czvf zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}.tar.gz zookeeper-exporter
+        zip -j zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}.zip zookeeper-exporter
 
     - name: create release
       id: create-release
@@ -46,6 +46,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_path: zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}.tar.gz
-        asset_name: zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}.tar.gz
-        asset_content_type: application/gzip
+        asset_path: zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}.zip
+        asset_name: zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}.zip
+        asset_content_type: application/zip
