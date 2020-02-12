@@ -27,7 +27,7 @@ jobs:
     - name: build
       run: |
         go build -v -o zookeeper-exporter
-        tar tar czvf zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}.tar.gz zookeeper-exporter
+        tar -czvf zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}.tar.gz --transform 's,^,zookeeper-exporter-${{ steps.v.outputs.tag }}-${{ runner.os }}/,'  zookeeper-exporter
 
     - name: create release
       id: create-release
