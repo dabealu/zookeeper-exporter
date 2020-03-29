@@ -6,12 +6,12 @@ services:
 
   zoo1:
     volumes:
-      - ./zoo-conf/zoo.cfg.1:/conf/zoo.cfg
+      - ./conf/zoo.cfg.1:/conf/zoo.cfg
 
   zoo2:
     volumes:
-      - ./zoo-conf/zoo.cfg.2:/conf/zoo.cfg
+      - ./conf/zoo.cfg.2:/conf/zoo.cfg
 
   zoo3:
     volumes:
-      - ./zoo-conf/zoo.cfg.3:/conf/zoo.cfg
+      - ./conf/zoo.cfg.3:/conf/zoo.cfg
