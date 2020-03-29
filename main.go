@@ -9,13 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"regexp"
 )
-
-func errFatal(e error) {
-	if e != nil {
-		log.Fatal(e)
-	}
-}
 
 type zkHost struct {
 	Unresolved string
@@ -47,11 +42,15 @@ func getMetrics(zkOpts zkOptions) map[string]string {
 		defer conn.Close()
 
 		_, err = conn.Write([]byte("mntr"))
-		errFatal(err)
+		if err != nil {
+			log.Printf("warning: failed to send 'mntr' to '%s': %s", h.Unresolved, err)
+		}
 
 		// read response
 		res, err := ioutil.ReadAll(conn)
-		errFatal(err)
+		if err != nil {
+			log.Printf("warning: failed read 'mntr' response from '%s': %s", h.Unresolved, err)
+		}
 
 		// get slice of strings from response, like 'zk_avg_latency 0'
 		lines := strings.Split(string(res), "\n")
@@ -75,17 +74,27 @@ func getMetrics(zkOpts zkOptions) map[string]string {
 			l = strings.Replace(l, "\t", " ", -1)
 			kv := strings.Split(l, " ")
 
-			if kv[0] == "zk_server_state" {
+			switch kv[0] {
+			case "zk_server_state":
 				zkLeader := fmt.Sprintf("zk_server_leader{%s}", hostLabel)
 				if kv[1] == "leader" {
 					metrics[zkLeader] = "1"
 				} else {
 					metrics[zkLeader] = "0"
 				}
-			} else if kv[0] == "zk_version" {
-				zkVersion := fmt.Sprintf("zk_version{%s,version=%q}", hostLabel, strings.Join(kv[1:], " "))
-				metrics[zkVersion] = "1"
-			} else if kv[0] != "" {
+			
+			case "zk_version":
+				re := regexp.MustCompile(`^([0-9]+\.[0-9]+\.[0-9]+).*$`)
+				version := re.ReplaceAllString(kv[1], "$1")
+
+				metrics[fmt.Sprintf("zk_version{%s,version=%q}", hostLabel, version)] = "1"
+
+			case "zk_peer_state":
+				metrics[fmt.Sprintf("zk_peer_state{%s,state=%q}", hostLabel, kv[1])] = "1"
+			
+			case "": // noop on empty string
+
+			default:
 				metrics[fmt.Sprintf("%s{%s}", kv[0], hostLabel)] = kv[1]
 			}
 		}
@@ -105,9 +114,10 @@ func serveMetrics(location, listen string, zkOpts zkOptions) {
 	}
 
 	http.HandleFunc(location, h)
-	log.Printf("starting serving metrics at %s%s", listen, location)
-	err := http.ListenAndServe(listen, nil)
-	errFatal(err)
+	log.Printf("info: serving metrics at %s%s", listen, location)
+	if err := http.ListenAndServe(listen, nil); err != nil {
+		log.Fatalf("fatal: shutting down exporter: %s", err)
+	}
 }
 
 func main() {
@@ -123,19 +133,28 @@ func main() {
 	Hosts := []zkHost{}
 
 	if *list == "" {
+		// single zk server
 		h := *host + ":" + *port
 		tcp, err := net.ResolveTCPAddr("tcp", h)
-		errFatal(err)
+		if err != nil {
+			log.Fatalf("fatal: cannot resolve zk hostname '%s': %s", h, err)
+		}
+
 		Hosts = append(Hosts, zkHost{Unresolved: h, TCPAddr: tcp})
 	} else {
+		// list of zk servers, 
 		for _, h := range strings.Split(*list, ",") {
 			tcp, err := net.ResolveTCPAddr("tcp", h)
-			errFatal(err)
+			if err != nil {
+				log.Printf("warning: cannot resolve zk hostname '%s': %s", h, err)
+				continue
+			}
+
 			Hosts = append(Hosts, zkHost{Unresolved: h, TCPAddr: tcp})
 		}
 	}
 
-	log.Printf("zookeeper addresses %v", Hosts)
+	log.Printf("info: zookeeper addresses %v", Hosts)
 
 	zkOpts := zkOptions{
 		Timeout: *timeout,
