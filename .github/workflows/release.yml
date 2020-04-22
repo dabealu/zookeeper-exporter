@@ -26,7 +26,7 @@ jobs:
         for OS in linux darwin; do
           echo "building binary for ${OS}"
           GOOS=${OS} GOARCH=amd64 go build -v -o zookeeper-exporter
-          tar -czvf zookeeper-exporter-${{ steps.v.outputs.tag }}-${OS}.tar.gz --transform 's,^,zookeeper-exporter-${{ steps.v.outputs.tag }}-${OS}/,' zookeeper-exporter
+          tar -czvf zookeeper-exporter-${{ steps.v.outputs.tag }}-${OS}.tar.gz --transform "s,^,zookeeper-exporter-${{ steps.v.outputs.tag }}-${OS}/," zookeeper-exporter
         done
         ls -lh
 
