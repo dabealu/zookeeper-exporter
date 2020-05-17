@@ -119,18 +119,18 @@ func getMetrics(options *Options) map[string]string {
 			}
 		}
 
-		conn, err = dialer.Dial("tcp", tcpaddr.String())
-		if err != nil {
-			continue
-		}
-		res = sendZookeeperCmd(conn, h, "ruok")
 		zkRuok := fmt.Sprintf("zk_ruok{%s}", hostLabel)
-		if res == "imok" {
-			metrics[zkRuok] = "1"
-		} else {
-			if strings.Contains(res, cmdNotExecutedSffx) {
-				logNotAllowed("ruok", hostLabel)
+		if conn, err = dialer.Dial("tcp", tcpaddr.String()); err == nil {
+			res = sendZookeeperCmd(conn, h, "ruok")
+			if res == "imok" {
+				metrics[zkRuok] = "1"
+			} else {
+				if strings.Contains(res, cmdNotExecutedSffx) {
+					logNotAllowed("ruok", hostLabel)
+				}
+				metrics[zkRuok] = "0"
 			}
+		} else {
 			metrics[zkRuok] = "0"
 		}
 
