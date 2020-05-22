@@ -7,9 +7,9 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
-	"regexp"
 )
 
 func main() {
@@ -44,9 +44,15 @@ type Options struct {
 	Hosts   []string
 }
 
+const cmdNotExecutedSffx = "is not executed because it is not in the whitelist."
+
+var versionRE = regexp.MustCompile(`^([0-9]+\.[0-9]+\.[0-9]+).*$`)
+
 // open tcp connections to zk nodes, send 'mntr' and return result as a map
 func getMetrics(options *Options) map[string]string {
 	metrics := map[string]string{}
+	timeout := time.Duration(options.Timeout) * time.Second
+	dialer := net.Dialer{Timeout: timeout}
 
 	for _, h := range options.Hosts {
 		tcpaddr, err := net.ResolveTCPAddr("tcp", h)
@@ -56,45 +62,31 @@ func getMetrics(options *Options) map[string]string {
 		}
 
 		hostLabel := fmt.Sprintf("zk_host=%q", h)
-
-		// open connection
-		timeout := time.Duration(options.Timeout) * time.Second
-		dialer := net.Dialer{Timeout: timeout}
+		zkUp := fmt.Sprintf("zk_up{%s}", hostLabel)
 
 		conn, err := dialer.Dial("tcp", tcpaddr.String())
 		if err != nil {
 			log.Printf("warning: cannot connect to %s: %v", h, err)
-			metrics[fmt.Sprintf("zk_up{%s}", hostLabel)] = "0"
+			metrics[zkUp] = "0"
 			continue
 		}
 
-		defer conn.Close()
-
-		_, err = conn.Write([]byte("mntr"))
-		if err != nil {
-			log.Printf("warning: failed to send 'mntr' to '%s': %s", h, err)
-		}
-
-		// read response
-		res, err := ioutil.ReadAll(conn)
-		if err != nil {
-			log.Printf("warning: failed read 'mntr' response from '%s': %s", h, err)
-		}
+		res := sendZookeeperCmd(conn, h, "mntr")
 
 		// get slice of strings from response, like 'zk_avg_latency 0'
-		lines := strings.Split(string(res), "\n")
+		lines := strings.Split(res, "\n")
 
 		// skip instance if it in a leader only state and doesnt serving client requets
 		if lines[0] == "This ZooKeeper instance is not currently serving requests" {
-			metrics[fmt.Sprintf("zk_up{%s}", hostLabel)] = "1"
+			metrics[zkUp] = "1"
 			metrics[fmt.Sprintf("zk_server_leader{%s}", hostLabel)] = "1"
 			continue
 		}
 
 		// 'mntr' command isn't allowed in zk config, log as a warning
-		if lines[0] == "mntr is not executed because it is not in the whitelist." {
-			metrics[fmt.Sprintf("zk_up{%s}", hostLabel)] = "0"
-			log.Printf("warning: mntr command isn't allowed at %s, see '4lw.commands.whitelist' ZK config parameter", hostLabel)
+		if strings.Contains(lines[0], cmdNotExecutedSffx) {
+			metrics[zkUp] = "0"
+			logNotAllowed("mntr", hostLabel)
 			continue
 		}
 
@@ -113,8 +105,7 @@ func getMetrics(options *Options) map[string]string {
 				}
 
 			case "zk_version":
-				re := regexp.MustCompile(`^([0-9]+\.[0-9]+\.[0-9]+).*$`)
-				version := re.ReplaceAllString(kv[1], "$1")
+				version := versionRE.ReplaceAllString(kv[1], "$1")
 
 				metrics[fmt.Sprintf("zk_version{%s,version=%q}", hostLabel, version)] = "1"
 
@@ -128,10 +119,45 @@ func getMetrics(options *Options) map[string]string {
 			}
 		}
 
-		metrics[fmt.Sprintf("zk_up{%s}", hostLabel)] = "1"
+		zkRuok := fmt.Sprintf("zk_ruok{%s}", hostLabel)
+		if conn, err = dialer.Dial("tcp", tcpaddr.String()); err == nil {
+			res = sendZookeeperCmd(conn, h, "ruok")
+			if res == "imok" {
+				metrics[zkRuok] = "1"
+			} else {
+				if strings.Contains(res, cmdNotExecutedSffx) {
+					logNotAllowed("ruok", hostLabel)
+				}
+				metrics[zkRuok] = "0"
+			}
+		} else {
+			metrics[zkRuok] = "0"
+		}
+
+		metrics[zkUp] = "1"
 	}
 
 	return metrics
+}
+
+func logNotAllowed(cmd, label string) {
+	log.Printf("warning: %s command isn't allowed at %s, see '4lw.commands.whitelist' ZK config parameter", cmd, label)
+}
+
+func sendZookeeperCmd(conn net.Conn, host, cmd string) string {
+	defer conn.Close()
+
+	_, err := conn.Write([]byte(cmd))
+	if err != nil {
+		log.Printf("warning: failed to send '%s' to '%s': %s", cmd, host, err)
+	}
+
+	res, err := ioutil.ReadAll(conn)
+	if err != nil {
+		log.Printf("warning: failed read '%s' response from '%s': %s", cmd, host, err)
+	}
+
+	return string(res)
 }
 
 // serve zk metrics at chosen address and url
