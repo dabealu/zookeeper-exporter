@@ -12,7 +12,7 @@ To build image with different name, pass it to `build.sh` as a first arg.
 ```
 Usage of zookeeper-exporter:
   -listen string
-        address to listen on (default "0.0.0.0:8080")
+        address to listen on (default "0.0.0.0:9141")
   -location string
         metrics location (default "/metrics")
   -timeout int
