@@ -115,7 +115,7 @@ func getMetrics(options *Options) map[string]string {
 			case "": // noop on empty string
 
 			default:
-				metrics[fmt.Sprintf("%s{%s}", kv[0], hostLabel)] = kv[1]
+				metrics[fmt.Sprintf("%s{%s}", strings.ReplaceAll(kv[0], "-", "_"), hostLabel)] = kv[1]
 			}
 		}
 
