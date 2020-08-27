@@ -16,32 +16,33 @@ func main() {
 	location := flag.String("location", "/metrics", "metrics location")
 	listen := flag.String("listen", "0.0.0.0:9141", "address to listen on")
 	timeout := flag.Int64("timeout", 30, "timeout for connection to zk servers, in seconds")
-	host := flag.String("zk-host", "127.0.0.1", "zookeeper host")
-	port := flag.String("zk-port", "2181", "zookeeper port")
-	list := flag.String("zk-list", "",
-		"comma separated list of zk servers, i.e. '10.0.0.1:2181,10.0.0.2:2181,10.0.0.3:2181', this flag overrides --zk-host/port")
+	zkhosts := flag.String("zk-hosts", "", "comma separated list of zk servers, e.g. '10.0.0.1:2181,10.0.0.2:2181,10.0.0.3:2181'")
+
 	flag.Parse()
 
-	hosts := []string{}
-	if *list == "" {
-		hosts = []string{fmt.Sprintf("%s:%s", *host, *port)}
-	} else {
-		hosts = strings.Split(*list, ",")
+	hosts := strings.Split(*zkhosts, ",")
+	if len(hosts) == 0 {
+		log.Fatal("fatal: no target zookeeper hosts specified, exiting")
 	}
 
-	log.Printf("info: zookeeper addresses %v", hosts)
+	log.Printf("info: zookeeper hosts: %v", hosts)
 
 	options := Options{
-		Timeout: *timeout,
-		Hosts:   hosts,
+		Timeout:  *timeout,
+		Hosts:    hosts,
+		Location: *location,
+		Listen:   *listen,
 	}
 
-	serveMetrics(*location, *listen, &options)
+	log.Printf("info: serving metrics at %s%s", *listen, *location)
+	serveMetrics(&options)
 }
 
 type Options struct {
-	Timeout int64
-	Hosts   []string
+	Timeout  int64
+	Hosts    []string
+	Location string
+	Listen   string
 }
 
 const cmdNotExecutedSffx = "is not executed because it is not in the whitelist."
@@ -161,16 +162,16 @@ func sendZookeeperCmd(conn net.Conn, host, cmd string) string {
 }
 
 // serve zk metrics at chosen address and url
-func serveMetrics(location, listen string, options *Options) {
+func serveMetrics(options *Options) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		for k, v := range getMetrics(options) {
 			fmt.Fprintf(w, "%s %s\n", k, v)
 		}
 	}
 
-	http.HandleFunc(location, handler)
-	log.Printf("info: serving metrics at %s%s", listen, location)
-	if err := http.ListenAndServe(listen, nil); err != nil {
+	http.HandleFunc(options.Location, handler)
+
+	if err := http.ListenAndServe(options.Listen, nil); err != nil {
 		log.Fatalf("fatal: shutting down exporter: %s", err)
 	}
 }

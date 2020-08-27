@@ -14,7 +14,7 @@ services:
   exp1:
     image: dabealu/zookeeper-exporter
     ports:
-      - 8081:8080
+      - 9141:9141
     command: --zk-host=zoo1
 
   # second
@@ -30,7 +30,7 @@ services:
   exp2:
     image: dabealu/zookeeper-exporter
     ports:
-      - 8082:8080
+      - 9142:9141
     command: --zk-host=zoo2
 
   # third
@@ -51,14 +51,14 @@ services:
   exp3:
     image: dabealu/zookeeper-exporter
     ports:
-      - 8083:8080
+      - 9143:9141
     command: --zk-host=zoo3 --timeout=5
 
   # multitarget
   exp123:
     image: dabealu/zookeeper-exporter
     ports:
-      - 8084:8080
+      - 9144:9141
     command: --zk-list="zoo1:2181,zoo2:2181,zoo3:2181" --timeout=5
 
   # prometheus server

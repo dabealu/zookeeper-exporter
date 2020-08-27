@@ -12,13 +12,13 @@ rule_files:
 scrape_configs:
 - job_name: 'exp1'
   static_configs:
-  - targets: ['exp1:8080']
+  - targets: ['exp1:9141']
 - job_name: 'exp2'
   static_configs:
-  - targets: ['exp2:8080']
+  - targets: ['exp2:9141']
 - job_name: 'exp3'
   static_configs:
-  - targets: ['exp3:8080']
+  - targets: ['exp3:9141']
 - job_name: 'exp123'
   static_configs:
-  - targets: ['exp123:8080']
+  - targets: ['exp123:9141']

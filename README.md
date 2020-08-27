@@ -9,6 +9,7 @@ To build image with different name, pass it to `build.sh` as a first arg.
 #### Usage
 **Note:** starting from zookeeper v3.4.10 it's required to have `mntr` command whitelisted (details: [4lw.commands.whitelist](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html)).
 
+**Warning:** flag to specify target zk hosts is changed since `v0.1.10`, see below
 ```
 Usage of zookeeper-exporter:
   -listen string
@@ -16,13 +17,9 @@ Usage of zookeeper-exporter:
   -location string
         metrics location (default "/metrics")
   -timeout int
-        timeout for connection to zk servers, in seconds (default 120)
-  -zk-host string
-        zookeeper host (default "127.0.0.1")
-  -zk-list string
-        comma separated list of zk servers, i.e. '10.0.0.1:2181,10.0.0.2:2181,10.0.0.3:2181', this flag overrides --zk-host/port
-  -zk-port string
-        zookeeper port (default "2181")
+        timeout for connection to zk servers, in seconds (default 30)
+  -zk-hosts string
+        comma separated list of zk servers, e.g. '10.0.0.1:2181,10.0.0.2:2181,10.0.0.3:2181'
 ```
 
 An example `docker-compose.yml` can be used for management of clustered zookeeper + exporters:
@@ -30,11 +27,11 @@ An example `docker-compose.yml` can be used for management of clustered zookeepe
 # start zk cluster and exporters
 docker-compose up -d
 
-# get metrics of first exporter (second and third exporters are on 8082 and 8083 ports)
-curl -s localhost:8081/metrics
+# get metrics of first exporter (second and third exporters are on 9142 and 9143 ports)
+curl -s localhost:9141/metrics
 
 # at 8084 port there's exporter which handles multiple zk hosts
-curl -s localhost:8084/metrics
+curl -s localhost:9144/metrics
 
 # shutdown containers
 docker-compose down -v
