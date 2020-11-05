@@ -49,6 +49,8 @@ const cmdNotExecutedSffx = "is not executed because it is not in the whitelist."
 
 var versionRE = regexp.MustCompile(`^([0-9]+\.[0-9]+\.[0-9]+).*$`)
 
+var metricNameReplacer = strings.NewReplacer("-", "_", ".", "_")
+
 // open tcp connections to zk nodes, send 'mntr' and return result as a map
 func getMetrics(options *Options) map[string]string {
 	metrics := map[string]string{}
@@ -116,7 +118,7 @@ func getMetrics(options *Options) map[string]string {
 			case "": // noop on empty string
 
 			default:
-				metrics[fmt.Sprintf("%s{%s}", strings.ReplaceAll(kv[0], "-", "_"), hostLabel)] = kv[1]
+				metrics[fmt.Sprintf("%s{%s}", metricNameReplacer.Replace(kv[0]), hostLabel)] = kv[1]
 			}
 		}
 
