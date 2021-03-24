@@ -1,4 +1,4 @@
-pkgname=mysqld_exporter
+pkgname=zookeeper_exporter
 pkgver=VERSION  # placeholder
 pkgver() {
     # 工具名: 打包-基础包
@@ -27,8 +27,7 @@ prepare() {
 
 build() {
     mkdir $startdir/bin
-    ls -l
-    go build -o $startdir/bin/${pkgname} main.go
+    go build -o $startdir/bin/${pkgname}
     ls -l $startdir/bin
 }
 
