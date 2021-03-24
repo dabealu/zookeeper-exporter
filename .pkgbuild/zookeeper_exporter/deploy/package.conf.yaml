@@ -1,0 +1,26 @@
+service_list:
+  - name: logic.zookeeper_exporter
+    port: 9402
+    host: ~
+dependencies: ~
+start_dependencies: []
+proc_list:
+    - proc_name: zookeeper_exporter
+      proc_num_min: ~
+      proc_num_max: ~
+      pid_file: ~
+port_list:
+    - port: 9402
+      type: tcp
+start_script: ""
+stop_script: ""
+restart_script: ""
+install_prescript: ""
+install_postscript: ""
+update_prescript: ""
+update_postscript: ""
+rollback_prescript: ""
+rollback_postscript: ""
+proc_guard: stopStart
+port_guard: stopStart
+user: easyops:easyops

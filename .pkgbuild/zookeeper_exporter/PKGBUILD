@@ -1,0 +1,28 @@
+pkgname=zookeeper_exporter
+pkgver=VERSION  # placeholder
+pkgver() {
+    # 工具名: 打包-基础包
+    # http://admin.easyops.local/tool/19398c5d3c4df767914d654b83206ec4
+    echo $_easyopsver | tr -cd '[[:alnum:]]._-'
+}
+pkgrel=1
+arch=('x86_64')
+options=('!strip')
+source=()
+
+_goversion=1.13.3
+
+build() {
+    mkdir $startdir/bin
+    go build -o $startdir/bin/${pkgname} main.go
+    ls -l $startdir/bin
+}
+
+package() {
+    install -d "$pkgdir/bin"
+    install -m755 "$startdir/bin/"* "$pkgdir/bin"
+
+    install -d "$pkgdir/deploy"
+    install -m755 "$startdir/deploy/"* "$pkgdir/deploy"
+
+}

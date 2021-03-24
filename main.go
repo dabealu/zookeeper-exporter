@@ -19,10 +19,9 @@ func main() {
 	zkhosts := flag.String("zk-hosts", "", "comma separated list of zk servers, e.g. '10.0.0.1:2181,10.0.0.2:2181,10.0.0.3:2181'")
 
 	flag.Parse()
-
-	hosts := strings.Split(*zkhosts, ",")
-	if len(hosts) == 0 {
-		log.Fatal("fatal: no target zookeeper hosts specified, exiting")
+	var hosts []string
+	if *zkhosts != "" {
+		hosts = strings.Split(*zkhosts, ",")
 	}
 
 	log.Printf("info: zookeeper hosts: %v", hosts)
@@ -166,6 +165,13 @@ func sendZookeeperCmd(conn net.Conn, host, cmd string) string {
 // serve zk metrics at chosen address and url
 func serveMetrics(options *Options) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
+		zkHosts := r.URL.Query().Get("zkhosts")
+		if zkHosts == "" && len(options.Hosts) == 0 {
+			http.Error(w, "fatal: no target zookeeper hosts specified, exiting", http.StatusBadRequest)
+			return
+		} else if zkHosts != "" {
+			options.Hosts = strings.Split(zkHosts, ",")
+		}
 		for k, v := range getMetrics(options) {
 			fmt.Fprintf(w, "%s %s\n", k, v)
 		}

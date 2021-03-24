@@ -38,6 +38,9 @@ curl -s localhost:9141/metrics
 # at 9184 port there's exporter which handles multiple zk hosts
 curl -s localhost:9144/metrics
 
+# scrape multiple zk hosts with url param `zkhosts`
+curl -s localhost:9144/metrics?zkhosts=10.0.0.1:2181,10.0.0.2:2181
+
 # shutdown containers
 docker-compose down -v
 ```
