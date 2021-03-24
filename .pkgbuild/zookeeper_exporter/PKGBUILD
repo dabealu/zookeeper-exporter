@@ -27,7 +27,7 @@ prepare() {
 
 build() {
     mkdir $startdir/bin
-    go build -o $startdir/bin/${pkgname}
+    go build -o $startdir/bin/${pkgname} $_go_proj_path
     ls -l $startdir/bin
 }
 
