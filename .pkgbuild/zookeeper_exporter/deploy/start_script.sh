@@ -11,7 +11,7 @@
 app_folder="zookeeper_exporter"                 # 项目根目录
 process_name="zookeeper_exporter"       # 进程名
 
-install_base="/usr/local/easyops"          # 安装根目录
+install_base="/data/exporter"          # 安装根目录
 data_base="/data/easyops"             # 日志/数据根目录
 
 #############################################################
@@ -29,16 +29,12 @@ fi
 
 
 # 启动命令
-start_cmd="./bin/zookeeper_exporter --listen=0.0.0.0:9402 >/dev/null 2>log/${app_folder}.log &"
+start_cmd="./bin/zookeeper_exporter --listen=0.0.0.0:9141 >/dev/null 2>log/${app_folder}.log &"
 
 
 # 日志目录
 log_path="${data_base}/${app_folder}/log"
 mkdir -p ${log_path}
-
-# 数据目录
-data_path="${data_base}/${app_folder}/data"
-mkdir -p ${data_path}
 
 
 #############################################################

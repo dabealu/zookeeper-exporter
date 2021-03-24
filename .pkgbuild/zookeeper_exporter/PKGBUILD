@@ -1,4 +1,4 @@
-pkgname=zookeeper_exporter
+pkgname=mysqld_exporter
 pkgver=VERSION  # placeholder
 pkgver() {
     # 工具名: 打包-基础包
@@ -11,9 +11,23 @@ options=('!strip')
 source=()
 
 _goversion=1.13.3
+_go_proj_domain="github.com/easy-monitor"
+_go_proj_path="$_go_proj_domain/zookeeper_exporter"
+
+prepare() {
+    export _projdir=$(readlink -f "$startdir/../..")
+    mkdir -p "$startdir/gopath/src/$_go_proj_domain"
+    ln -snf "$_projdir" "$startdir/gopath/src/$_go_proj_path"
+
+    eval "$(GIMME_GO_VERSION=$_goversion gimme)"
+    unset GOPATH
+
+    go env
+}
 
 build() {
     mkdir $startdir/bin
+    ls -l
     go build -o $startdir/bin/${pkgname} main.go
     ls -l $startdir/bin
 }
