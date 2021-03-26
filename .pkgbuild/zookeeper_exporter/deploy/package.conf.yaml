@@ -1,7 +1,4 @@
-service_list:
-  - name: logic.zookeeper_exporter
-    port: 9141
-    host: ~
+service_list: []
 dependencies: ~
 start_dependencies: []
 proc_list:
@@ -9,9 +6,7 @@ proc_list:
       proc_num_min: ~
       proc_num_max: ~
       pid_file: ~
-port_list:
-    - port: 9141
-      type: tcp
+port_list: []
 start_script: ""
 stop_script: ""
 restart_script: ""
