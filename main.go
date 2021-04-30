@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -17,8 +18,23 @@ func main() {
 	listen := flag.String("listen", "0.0.0.0:9141", "address to listen on")
 	timeout := flag.Int64("timeout", 30, "timeout for connection to zk servers, in seconds")
 	zkhosts := flag.String("zk-hosts", "", "comma separated list of zk servers, e.g. '10.0.0.1:2181,10.0.0.2:2181,10.0.0.3:2181'")
+	zktlsauth := flag.Bool("zk-tls-auth", false, "zk tls client authentication")
+	zktlscert := flag.String("zk-tls-auth-cert", "", "cert for zk tls client authentication")
+	zktlskey := flag.String("zk-tls-auth-key", "", "key for zk tls client authentication")
 
 	flag.Parse()
+
+	var clientCert *tls.Certificate
+	if *zktlsauth {
+		if *zktlscert == "" || *zktlskey == "" {
+			log.Fatal("-zk-tls-auth-cert and -zk-tls-auth-key flags are required when -zk-tls-auth is true")
+		}
+		_clientCert, err := tls.LoadX509KeyPair(*zktlscert, *zktlskey)
+		if err != nil {
+			log.Fatalf("fatal: can't load keypair %s, %s: %v", *zktlskey, *zktlscert, err)
+		}
+		clientCert = &_clientCert
+	}
 
 	hosts := strings.Split(*zkhosts, ",")
 	if len(hosts) == 0 {
@@ -28,10 +44,11 @@ func main() {
 	log.Printf("info: zookeeper hosts: %v", hosts)
 
 	options := Options{
-		Timeout:  *timeout,
-		Hosts:    hosts,
-		Location: *location,
-		Listen:   *listen,
+		Timeout:    *timeout,
+		Hosts:      hosts,
+		Location:   *location,
+		Listen:     *listen,
+		ClientCert: clientCert,
 	}
 
 	log.Printf("info: serving metrics at %s%s", *listen, *location)
@@ -39,10 +56,11 @@ func main() {
 }
 
 type Options struct {
-	Timeout  int64
-	Hosts    []string
-	Location string
-	Listen   string
+	Timeout    int64
+	Hosts      []string
+	Location   string
+	Listen     string
+	ClientCert *tls.Certificate
 }
 
 const cmdNotExecutedSffx = "is not executed because it is not in the whitelist."
@@ -51,11 +69,22 @@ var versionRE = regexp.MustCompile(`^([0-9]+\.[0-9]+\.[0-9]+).*$`)
 
 var metricNameReplacer = strings.NewReplacer("-", "_", ".", "_")
 
+func dial(host string, timeout time.Duration, clientCert *tls.Certificate) (net.Conn, error) {
+	dialer := net.Dialer{Timeout: timeout}
+	if clientCert == nil {
+		return dialer.Dial("tcp", host)
+	} else {
+		return tls.DialWithDialer(&dialer, "tcp", host, &tls.Config{
+			Certificates:       []tls.Certificate{*clientCert},
+			InsecureSkipVerify: true,
+		})
+	}
+}
+
 // open tcp connections to zk nodes, send 'mntr' and return result as a map
 func getMetrics(options *Options) map[string]string {
 	metrics := map[string]string{}
 	timeout := time.Duration(options.Timeout) * time.Second
-	dialer := net.Dialer{Timeout: timeout}
 
 	for _, h := range options.Hosts {
 		tcpaddr, err := net.ResolveTCPAddr("tcp", h)
@@ -67,7 +96,7 @@ func getMetrics(options *Options) map[string]string {
 		hostLabel := fmt.Sprintf("zk_host=%q", h)
 		zkUp := fmt.Sprintf("zk_up{%s}", hostLabel)
 
-		conn, err := dialer.Dial("tcp", tcpaddr.String())
+		conn, err := dial(tcpaddr.String(), timeout, options.ClientCert)
 		if err != nil {
 			log.Printf("warning: cannot connect to %s: %v", h, err)
 			metrics[zkUp] = "0"
@@ -123,7 +152,7 @@ func getMetrics(options *Options) map[string]string {
 		}
 
 		zkRuok := fmt.Sprintf("zk_ruok{%s}", hostLabel)
-		if conn, err = dialer.Dial("tcp", tcpaddr.String()); err == nil {
+		if conn, err := dial(tcpaddr.String(), timeout, options.ClientCert); err == nil {
 			res = sendZookeeperCmd(conn, h, "ruok")
 			if res == "imok" {
 				metrics[zkRuok] = "1"
