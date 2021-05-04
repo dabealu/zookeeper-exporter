@@ -95,9 +95,7 @@ func getMetrics(options *Options) map[string]string {
 
 		// split each line into key-value pair
 		for _, l := range lines {
-			l = strings.Replace(l, "\t", " ", -1)
-			kv := strings.Split(l, " ")
-
+			kv := strings.Split(l, "\t")
 			switch kv[0] {
 			case "zk_server_state":
 				zkLeader := fmt.Sprintf("zk_server_leader{%s}", hostLabel)
@@ -109,7 +107,6 @@ func getMetrics(options *Options) map[string]string {
 
 			case "zk_version":
 				version := versionRE.ReplaceAllString(kv[1], "$1")
-
 				metrics[fmt.Sprintf("zk_version{%s,version=%q}", hostLabel, version)] = "1"
 
 			case "zk_peer_state":
@@ -118,7 +115,13 @@ func getMetrics(options *Options) map[string]string {
 			case "": // noop on empty string
 
 			default:
-				metrics[fmt.Sprintf("%s{%s}", metricNameReplacer.Replace(kv[0]), hostLabel)] = kv[1]
+				if strings.Contains(kv[0], "}") {
+					k := strings.Replace(kv[0], "}", ",", 1)
+					keyName := fmt.Sprintf("%s%s}", k, hostLabel)
+					metrics[keyName] = kv[1]
+				} else {
+					metrics[fmt.Sprintf("%s{%s}", kv[0], hostLabel)] = kv[1]
+				}
 			}
 		}
 
