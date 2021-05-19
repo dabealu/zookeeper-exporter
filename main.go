@@ -128,7 +128,6 @@ func getMetrics(options *Options) map[string]string {
 
 		// split each line into key-value pair
 		for _, l := range lines {
-			// skip empty lines
 			if l == "" {
 				continue
 			}
