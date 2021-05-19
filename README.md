@@ -1,11 +1,11 @@
 ### Prometheus zookeeper exporter
 
-Exports `mntr` zookeeper's stats in prometheus format.  
+Exports `mntr` zookeeper's stats in prometheus format.
 `zk_followers`, `zk_synced_followers` and `zk_pending_syncs` metrics are available only on cluster leader.
 
 #### Build
 
-`./build.sh` script builds `dabealu/zookeeper-exporter:latest` docker image.  
+`./build.sh` script builds `dabealu/zookeeper-exporter:latest` docker image.
 To build image with different name, pass it to `build.sh` as a first arg.
 
 #### Usage
@@ -24,6 +24,12 @@ Usage of zookeeper-exporter:
         timeout for connection to zk servers, in seconds (default 30)
   -zk-hosts string
         comma separated list of zk servers, e.g. '10.0.0.1:2181,10.0.0.2:2181,10.0.0.3:2181'
+  -zk-tls-auth bool
+        zk tls client authentication (default false)
+  -zk-tls-auth-cert string
+        tls certiticate for zk tls client authentication (required if -zk-tls-auth is true)
+  -zk-tls-auth-key string
+        tls key for zk tls client authentication (required if -zk-tls-auth is true)
 ```
 
 An example `docker-compose.yml` can be used for management of clustered zookeeper + exporters:
