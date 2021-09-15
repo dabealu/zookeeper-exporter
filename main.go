@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -131,10 +132,16 @@ func getMetrics(options *Options) map[string]string {
 			if l == "" {
 				continue
 			}
+			var kv []string
+			if strings.Contains(l, "}") {
+				kv = strings.Split(l, "}")
+				kv[0]+="}"
+			} else {
+				kv = strings.Split(strings.Replace(l, "\t", " ", -1), " ")
+			}
 
-			kv := strings.Split(strings.Replace(l, "\t", " ", -1), " ")
-			key := kv[0]
-			value := kv[1]
+			key := strings.Replace(kv[0],"\t", " ", -1)
+			value := strings.ReplaceAll(strings.Replace(kv[1],"\t", " ", -1)," ","")
 
 			switch key {
 			case "zk_server_state":
@@ -160,6 +167,14 @@ func getMetrics(options *Options) map[string]string {
 					k = fmt.Sprintf("%s%s}", k, hostLabel)
 				} else {
 					k = fmt.Sprintf("%s{%s}", metricNameReplacer.Replace(key), hostLabel)
+				}
+				if strings.Contains(value, "E") {
+					valueNum, err := decimal.NewFromString(value)
+					if err != nil {
+						log.Printf("decimal.NewFromString error, numStr:%s, err:%v", value, err)
+						continue
+					}
+					value = valueNum.String()
 				}
 
 				if !isDigit(value) {
