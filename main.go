@@ -23,7 +23,7 @@ const (
 
 var (
 	versionRE          = regexp.MustCompile(`^([0-9]+\.[0-9]+\.[0-9]+).*$`)
-	metricNameReplacer = strings.NewReplacer("-", "_", ".", "_")
+	metricNameReplacer = strings.NewReplacer("-", "_", ".", "_", ",", "_")
 )
 
 func main() {
