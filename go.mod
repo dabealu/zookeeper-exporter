@@ -1,1 +1,1 @@
-module github.com/QubitProducts/exporter_exporter
+module github.com/dabealu/zookeeper-exporter
