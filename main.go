@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"os"
 )
 
 const (
@@ -50,8 +51,10 @@ func main() {
 	}
 
 	hosts := strings.Split(*zkhosts, ",")
-	if len(hosts) == 0 {
-		log.Fatal("fatal: no target zookeeper hosts specified, exiting")
+	if len(hosts) == 0 || (len(hosts) == 1 && hosts[0] == "") {
+		log.Print("fatal: no target zookeeper hosts specified.")
+		flag.Usage()
+		os.Exit(1)
 	}
 
 	log.Printf("info: zookeeper hosts: %v", hosts)
