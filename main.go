@@ -155,7 +155,7 @@ func getMetrics(options *Options) map[string]string {
 			default:
 				var k string
 				if strings.Contains(key, "}") {
-					k = metricNameReplacer.Replace(key)
+					k = metricNameReplacer.Replace(key[0:strings.Index(key, "{")]) + key[strings.Index(key, "{"):]
 					k = strings.Replace(k, "}", ",", 1)
 					k = fmt.Sprintf("%s%s}", k, hostLabel)
 				} else {
