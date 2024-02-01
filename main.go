@@ -91,102 +91,120 @@ func getMetrics(options *Options) map[string]string {
 	timeout := time.Duration(options.Timeout) * time.Second
 
 	for _, h := range options.Hosts {
-		tcpaddr, err := net.ResolveTCPAddr("tcp", h)
+		// split host and port from h
+		host, port, err := net.SplitHostPort(h)
 		if err != nil {
-			log.Printf("warning: cannot resolve zk hostname '%s': %s", h, err)
+			log.Printf("warning: cannot split zk address '%s': %s", h, err)
 			continue
 		}
 
-		hostLabel := fmt.Sprintf("zk_host=%q", h)
-		zkUp := fmt.Sprintf("zk_up{%s}", hostLabel)
-
-		conn, err := dial(tcpaddr.String(), timeout, options.ClientCert)
+		// find all ip addresses based on host
+		ips, err := net.LookupHost(host)
 		if err != nil {
-			log.Printf("warning: cannot connect to %s: %v", h, err)
-			metrics[zkUp] = "0"
+			log.Printf("warning: cannot look up zk host '%s': %s", host, err)
 			continue
 		}
 
-		res := sendZookeeperCmd(conn, h, "mntr")
-
-		// get slice of strings from response, like 'zk_avg_latency 0'
-		lines := strings.Split(res, "\n")
-
-		// skip instance if it in a leader only state and doesnt serving client requets
-		if lines[0] == instanceNotServingMessage {
-			metrics[zkUp] = "1"
-			metrics[fmt.Sprintf("zk_server_leader{%s}", hostLabel)] = "1"
-			continue
-		}
-
-		// 'mntr' command isn't allowed in zk config, log as a warning
-		if strings.Contains(lines[0], cmdNotExecutedSffx) {
-			metrics[zkUp] = "0"
-			log.Printf(commandNotAllowedTmpl, "mntr", hostLabel)
-			continue
-		}
-
-		// split each line into key-value pair
-		for _, l := range lines {
-			if l == "" {
+		for _, ip := range ips {
+			// Concatenate ip and port into the form ip:host
+			addr := net.JoinHostPort(ip, port)
+			tcpaddr, err := net.ResolveTCPAddr("tcp", addr)
+			if err != nil {
+				log.Printf("warning: cannot resolve zk hostname '%s': %s", addr, err)
 				continue
 			}
 
-			kv := strings.Split(strings.Replace(l, "\t", " ", -1), " ")
-			key := kv[0]
-			value := kv[1]
+			hostLabel := fmt.Sprintf("zk_host=%q", addr)
+			zkUp := fmt.Sprintf("zk_up{%s}", hostLabel)
 
-			switch key {
-			case "zk_server_state":
-				zkLeader := fmt.Sprintf("zk_server_leader{%s}", hostLabel)
-				if value == "leader" {
-					metrics[zkLeader] = "1"
-				} else {
-					metrics[zkLeader] = "0"
-				}
+			conn, err := dial(tcpaddr.String(), timeout, options.ClientCert)
+			if err != nil {
+				log.Printf("warning: cannot connect to %s: %v", addr, err)
+				metrics[zkUp] = "0"
+				continue
+			}
 
-			case "zk_version":
-				version := versionRE.ReplaceAllString(value, "$1")
-				metrics[fmt.Sprintf("zk_version{%s,version=%q}", hostLabel, version)] = "1"
+			res := sendZookeeperCmd(conn, addr, "mntr")
 
-			case "zk_peer_state":
-				metrics[fmt.Sprintf("zk_peer_state{%s,state=%q}", hostLabel, value)] = "1"
+			// get slice of strings from response, like 'zk_avg_latency 0'
+			lines := strings.Split(res, "\n")
 
-			default:
-				var k string
-				if strings.Contains(key, "}") {
-					k = metricNameReplacer.Replace(key)
-					k = strings.Replace(k, "}", ",", 1)
-					k = fmt.Sprintf("%s%s}", k, hostLabel)
-				} else {
-					k = fmt.Sprintf("%s{%s}", metricNameReplacer.Replace(key), hostLabel)
-				}
+			// skip instance if it in a leader only state and doesnt serving client requets
+			if lines[0] == instanceNotServingMessage {
+				metrics[zkUp] = "1"
+				metrics[fmt.Sprintf("zk_server_leader{%s}", hostLabel)] = "1"
+				continue
+			}
 
-				if !isDigit(value) {
-					log.Printf("warning: skipping metric %q which holds not-digit value: %q", key, value)
+			// 'mntr' command isn't allowed in zk config, log as a warning
+			if strings.Contains(lines[0], cmdNotExecutedSffx) {
+				metrics[zkUp] = "0"
+				log.Printf(commandNotAllowedTmpl, "mntr", hostLabel)
+				continue
+			}
+
+			// split each line into key-value pair
+			for _, l := range lines {
+				if l == "" {
 					continue
 				}
 
-				metrics[k] = value
-			}
-		}
+				kv := strings.Split(strings.Replace(l, "\t", " ", -1), " ")
+				key := kv[0]
+				value := kv[1]
 
-		zkRuok := fmt.Sprintf("zk_ruok{%s}", hostLabel)
-		if conn, err := dial(tcpaddr.String(), timeout, options.ClientCert); err == nil {
-			res = sendZookeeperCmd(conn, h, "ruok")
-			if res == "imok" {
-				metrics[zkRuok] = "1"
-			} else {
-				if strings.Contains(res, cmdNotExecutedSffx) {
-					log.Printf(commandNotAllowedTmpl, "ruok", hostLabel)
+				switch key {
+				case "zk_server_state":
+					zkLeader := fmt.Sprintf("zk_server_leader{%s}", hostLabel)
+					if value == "leader" {
+						metrics[zkLeader] = "1"
+					} else {
+						metrics[zkLeader] = "0"
+					}
+
+				case "zk_version":
+					version := versionRE.ReplaceAllString(value, "$1")
+					metrics[fmt.Sprintf("zk_version{%s,version=%q}", hostLabel, version)] = "1"
+
+				case "zk_peer_state":
+					metrics[fmt.Sprintf("zk_peer_state{%s,state=%q}", hostLabel, value)] = "1"
+
+				default:
+					var k string
+					if strings.Contains(key, "}") {
+						k = metricNameReplacer.Replace(key)
+						k = strings.Replace(k, "}", ",", 1)
+						k = fmt.Sprintf("%s%s}", k, hostLabel)
+					} else {
+						k = fmt.Sprintf("%s{%s}", metricNameReplacer.Replace(key), hostLabel)
+					}
+
+					if !isDigit(value) {
+						log.Printf("warning: skipping metric %q which holds not-digit value: %q", key, value)
+						continue
+					}
+
+					metrics[k] = value
 				}
+			}
+
+			zkRuok := fmt.Sprintf("zk_ruok{%s}", hostLabel)
+			if conn, err := dial(tcpaddr.String(), timeout, options.ClientCert); err == nil {
+				res = sendZookeeperCmd(conn, h, "ruok")
+				if res == "imok" {
+					metrics[zkRuok] = "1"
+				} else {
+					if strings.Contains(res, cmdNotExecutedSffx) {
+						log.Printf(commandNotAllowedTmpl, "ruok", hostLabel)
+					}
+					metrics[zkRuok] = "0"
+				}
+			} else {
 				metrics[zkRuok] = "0"
 			}
-		} else {
-			metrics[zkRuok] = "0"
-		}
 
-		metrics[zkUp] = "1"
+			metrics[zkUp] = "1"
+		}
 	}
 
 	return metrics
